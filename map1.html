@@ -131,8 +131,8 @@
     }
     #searchbar {
         position: absolute;
-        top: 75px;
-        right:60px;
+        top: 100px;
+        left: 10px;
         z-index: 1;
         background: white;
         padding: 10px;
@@ -150,7 +150,7 @@
     #searchbar button {
         padding: 5px;
         font-size: 14px;
-        background-color: #003E69;
+        background-color: #007cbf;
         color: white;
         border: none;
         border-radius: 3px;
@@ -272,42 +272,12 @@
                 data: 'data/bidang.geojson'
             },
             paint: {
-                'fill-color': '#FF0000',
-                'fill-opacity': 0.5
-            }
-        });
-        const geojsonData = map.getSource('geojson-layer1')._data;
-
-        // Tambahkan id ke setiap fitur
-        geojsonData.features.forEach((feature, index) => {
-            feature.id = index; // Buat id unik
-        });
-
-        // Update data sumber dengan id baru
-        map.getSource('geojson-layer1').setData(geojsonData);
-
-        map.setFeatureState(
-            { source: 'geojson-layer1', id: matchingFeature.id },
-            { highlighted: true }
-        );
-
-        // Tambahkan gaya dinamis untuk fitur yang disorot
-        map.addLayer({
-            id: 'highlight-layer',
-            type: 'fill',
-            source: 'geojson-layer1',
-            paint: {
-                'fill-color': [
-                    'case',
-                    ['boolean', ['feature-state', 'highlighted'], false],
-                    '#FFFF00', // Warna jika fitur disorot
-                    '#FF0000'  // Warna default
-                ],
+                'fill-color': '#FF0000', // Warna tetap
                 'fill-opacity': 0.5
             }
         });
 
-        // Tambahkan layer "Zona Nilai Tanah"
+        // Tambahkan layer "Zona Nilai Tanah" (warna berdasarkan "Nilai Rerata")
         map.addLayer({
             id: 'geojson-layer2',
             type: 'fill',
@@ -319,20 +289,20 @@
                 'fill-color': [
                     'step',
                     ['get', 'Harga Tanah (Desimal)'],
-                    '#008000', 417001,
-                    '#32CD32', 765001,
-                    '#ADFF2F', 1480001,
-                    '#FFFF00', 2578001,
-                    '#FFD700', 4304001,
-                    '#FFA500', 5547001,
-                    '#FF4500', 7519001,
-                    '#FF0000'
+                    '#008000', // Default < 417.000
+                    417001, '#32CD32', // 417.001 - 765.001
+                    765001, '#ADFF2F', // 765.001 - 1.480.001
+                    1480001, '#FFFF00', // 1.480.001 - 2.578.001
+                    2578001, '#FFD700', // 2.578.001 - 4.304.001
+                    4304001, '#FFA500', // 4.304.001 - 5.547.001
+                    5547001, '#FF4500', // 5.547.001 - 7.519.001
+                    7519001, '#FF0000' // > 7.519.001
                 ],
                 'fill-opacity': 0.5
             }
         });
 
-        // Tambahkan layer "Pola Ruang"
+        // Tambahkan layer "Pola Ruang" (warna berdasarkan "NamaObjek")
         map.addLayer({
             id: 'geojson-layer3',
             type: 'fill',
@@ -344,20 +314,20 @@
                 'fill-color': [
                     'match',
                     ['get', 'Kelas'],
-                    'Perairan', '#1E90FF',
-                    'Transportasi dan Infrastruktur', '#FFD700',
-                    'Permukiman', '#FF4500',
-                    'Perdagangan dan Jasa', '#32CD32',
-                    'Pertanian dan Kehutanan', '#228B22',
-                    'Pariwisata', '#330033',
-                    'Fasilitas Khusus', '#D2691E',
-                    '#808080'
+                    'Perairan', '#1E90FF', // Biru Laut
+                    'Transportasi dan Infrastruktur', '#FFD700', // Emas
+                    'Permukiman', '#FF4500', // Oranye Merah
+                    'Perdagangan dan Jasa', '#32CD32', // Hijau Terang
+                    'Pertanian dan Kehutanan', '#228B22', // Hijau Tua
+                    'Pariwisata', '#330033', // Ungu
+                    'Fasilitas Khusus', '#D2691E', // Cokelat
+                    '#808080' // Default warna lainnya (Abu-abu)
                 ],
                 'fill-opacity': 0.5
             }
         });
 
-        // Set visibilitas awal
+        // Set visibilitas awal: "visible" untuk layer pertama, "none" untuk yang lainnya
         geojsonLayers.forEach((layer, index) => {
             map.setLayoutProperty(layer.id, 'visibility', index === 0 ? 'visible' : 'none');
         });
@@ -368,59 +338,160 @@
             layerOptions.style.display = layerOptions.style.display === 'none' ? 'block' : 'none';
         });
 
-        // Handle radio button selection
+        // Handle radio button selection untuk mengaktifkan satu layer dalam satu waktu
         const layerRadios = document.querySelectorAll('input[name="layers"]');
         layerRadios.forEach((radio) => {
             radio.addEventListener('change', (event) => {
                 const selectedLayerName = event.target.value;
+
                 geojsonLayers.forEach((layer) => {
                     const visibility = layer.name === selectedLayerName ? 'visible' : 'none';
                     map.setLayoutProperty(layer.id, 'visibility', visibility);
                 });
+
+                console.log(`Layer activated: ${selectedLayerName}`);
             });
         });
     });
-    function handleLayerClick(layerId, title) {
-    map.on('click', layerId, (e) => {
-        const properties = e.features[0].properties; // Mengambil atribut fitur
-        const coordinates = e.lngLat; // Mengambil lokasi klik
-
-        // Buat tabel atribut
-        let tableContent = '<table style="width:100%; border-collapse:collapse;">';
-        for (const [key, value] of Object.entries(properties)) {
-            tableContent += `
-                <tr>
-                    <td style="border:1px solid #ddd; padding:8px;"><strong>${key}</strong></td>
-                    <td style="border:1px solid #ddd; padding:8px;">${value}</td>
-                </tr>
-            `;
-        }
-        tableContent += '</table>';
-
-        // Menampilkan popup
-        new mapboxgl.Popup({
-            offset: [10, -10] // Offset horizontal dan vertikal untuk menghindari overlap
-        })
-            .setLngLat([coordinates.lng + 0.00050, coordinates.lat + 0.00000])
-            .setHTML(`
-                <div style="font-family:Arial, sans-serif; font-size:10px;">
-                    <strong>${title}</strong><br>
-                    ${tableContent}
-                </div>
-            `)
-            .addTo(map);
-    });
-}
-
-// Terapkan fungsi ke masing-masing layer
-handleLayerClick('geojson-layer1', 'Atribut Bidang Tanah');
-handleLayerClick('geojson-layer2', 'Atribut Zona Nilai Tanah');
-handleLayerClick('geojson-layer3', 'Atribut Pola Ruang');
-
-        
 
 
+
+
+    map.on('click', 'geojson-layer2', (e) => {
+                const properties = e.features[0].properties; // Mengambil atribut bidang tanah
+                const coordinates = e.lngLat; // Mengambil lokasi klik
+
+                let tableContent = '<table style="width:100%; border-collapse:collapse;">';
+                for (const [key, value] of Object.entries(properties)) {
+                    tableContent += `
+                        <tr>
+                            <td style="border:1px solid #ddd; padding:8px;"><strong>${key}</strong></td>
+                            <td style="border:1px solid #ddd; padding:8px;">${value}</td>
+                        </tr>
+                    `;
+                }
+                tableContent += '</table>';
+
+                
+                // Menampilkan popup
+                new mapboxgl.Popup({
+                    offset: [10, -10] // Offset horizontal dan vertikal untuk menghindari overlap
+                })
+                    .setLngLat([coordinates.lng + 0.00050, coordinates.lat + 0.00000])
+                    .setHTML(`
+                        <div style="font-family:Arial, sans-serif; font-size:10px;">
+                            <strong>Atribut Zona Nilai Tanah</strong><br>
+                            ${tableContent}
+                        </div>
+                    `)
+                    .addTo(map);
+            });
+            map.on('click', 'geojson-layer3', (e) => {
+                const properties = e.features[0].properties; // Mengambil atribut bidang tanah
+                const coordinates = e.lngLat; // Mengambil lokasi klik
+
+                let tableContent = '<table style="width:100%; border-collapse:collapse;">';
+                for (const [key, value] of Object.entries(properties)) {
+                    tableContent += `
+                        <tr>
+                            <td style="border:1px solid #ddd; padding:8px;"><strong>${key}</strong></td>
+                            <td style="border:1px solid #ddd; padding:8px;">${value}</td>
+                        </tr>
+                    `;
+                }
+                tableContent += '</table>';
+
+                
+                // Menampilkan popup
+                new mapboxgl.Popup({
+                    offset: [10, -10] // Offset horizontal dan vertikal untuk menghindari overlap
+                })
+                    .setLngLat([coordinates.lng + 0.00050, coordinates.lat + 0.00000])
+                    .setHTML(`
+                        <div style="font-family:Arial, sans-serif; font-size:10px;">
+                            <strong>Atribut RDTR</strong><br>
+                            ${tableContent}
+                        </div>
+                    `)
+                    .addTo(map);
+            });
+            map.on('click', 'geojson-layer1', (e) => {
+                const properties = e.features[0].properties; // Mengambil atribut bidang tanah
+                const coordinates = e.lngLat; // Mengambil lokasi klik
+
+                let tableContent = '<table style="width:100%; border-collapse:collapse;">';
+                for (const [key, value] of Object.entries(properties)) {
+                    tableContent += `
+                        <tr>
+                            <td style="border:1px solid #ddd; padding:8px;"><strong>${key}</strong></td>
+                            <td style="border:1px solid #ddd; padding:8px;">${value}</td>
+                        </tr>
+                    `;
+                }
+                tableContent += '</table>';
+
+                
+                // Menampilkan popup
+                new mapboxgl.Popup({
+                    offset: [10, -10] // Offset horizontal dan vertikal untuk menghindari overlap
+                })
+                    .setLngLat([coordinates.lng + 0.00050, coordinates.lat + 0.00000])
+                    .setHTML(`
+                        <div style="font-family:Arial, sans-serif; font-size:10px;">
+                            <strong>Atribut Bidang Tanah</strong><br>
+                            ${tableContent}
+                        </div>
+                    `)
+                    .addTo(map);
+            });
     
+            function searchNIB() {
+        const nibInput = document.getElementById('nibInput').value.trim();
+
+        // Validasi input
+        if (!nibInput) {
+            alert('Harap masukkan NIB.');
+            return;
+        }
+
+        // Ambil sumber GeoJSON dari layer
+        const source = map.getSource('geojson-layer1');
+        if (!source) {
+            alert('Layer "Bidang Tanah" belum dimuat.');
+            console.error('Sumber GeoJSON tidak ditemukan.');
+            return;
+        }
+
+        const geojsonData = source._data; // Ambil data GeoJSON
+        if (!geojsonData || !geojsonData.features) {
+            alert('Data GeoJSON tidak valid.');
+            console.error('Data GeoJSON kosong atau tidak valid:', geojsonData);
+            return;
+        }
+
+        // Cari fitur berdasarkan NIB
+        const feature = geojsonData.features.find(f => f.properties.NIB === nibInput);
+        if (!feature) {
+            alert('Bidang tanah dengan NIB tersebut tidak ditemukan.');
+            console.error('Fitur dengan NIB', nibInput, 'tidak ditemukan.');
+            return;
+        }
+
+        console.log('Fitur ditemukan:', feature); // Debugging fitur
+
+        // Hitung titik tengah fitur (Polygon/MultiPolygon)
+        const center = turf.center(feature).geometry.coordinates;
+        console.log('Koordinat titik tengah:', center);
+
+        // Pindahkan peta ke lokasi fitur
+        map.flyTo({ center, zoom: 16 });
+
+        // Tampilkan popup di lokasi fitur
+        new mapboxgl.Popup()
+            .setLngLat(center)
+            .setHTML(`<strong>Bidang Tanah</strong><br>NIB: ${nibInput}`)
+            .addTo(map);
+    }
     map.on('style.load', () => {
         // Insert the layer beneath any symbol layer.
         const layers = map.getStyle().layers;
@@ -475,43 +546,6 @@ handleLayerClick('geojson-layer3', 'Atribut Pola Ruang');
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
     map.addControl(new mapboxgl.FullscreenControl(), 'top-right');
     map.addControl(new mapboxgl.ScaleControl());
-    function searchNIB() {
-        const nibInput = document.getElementById('nibInput').value.trim();
-
-        if (!nibInput) {
-            alert('Masukkan NIB untuk mencari.');
-            return;
-        }
-
-        const features = map.querySourceFeatures('geojson-layer1', {
-            sourceLayer: 'geojson-layer1'
-        });
-
-        const matchingFeatures = features.filter(feature => 
-            feature.properties.NIB && feature.properties.NIB === nibInput
-        );
-
-        console.log('Matching Features:', matchingFeatures); // Debug
-
-        if (matchingFeatures.length > 0) {
-            const matchingFeature = matchingFeatures[0];
-            console.log('Selected Feature ID:', matchingFeature.id); // Debug
-
-            map.flyTo({
-                center: turf.centroid(matchingFeature).geometry.coordinates,
-                zoom: 20,
-                essential: true
-            });
-
-            map.setFilter('highlight-layer', ['==', 'id', matchingFeature.id]);
-        } else {
-            alert(`NIB ${nibInput} tidak ditemukan.`);
-        }
-    }
-
-
-
-
 
 </script>
 </body>
