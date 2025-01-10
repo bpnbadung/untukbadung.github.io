@@ -276,37 +276,16 @@
                 'fill-opacity': 0.5
             }
         });
-        const geojsonData = map.getSource('geojson-layer1')._data;
-
-        // Tambahkan id ke setiap fitur
-        geojsonData.features.forEach((feature, index) => {
-            feature.id = index; // Buat id unik
-        });
-
-        // Update data sumber dengan id baru
-        map.getSource('geojson-layer1').setData(geojsonData);
-
-        map.setFeatureState(
-            { source: 'geojson-layer1', id: matchingFeature.id },
-            { highlighted: true }
-        );
-
-        // Tambahkan gaya dinamis untuk fitur yang disorot
         map.addLayer({
             id: 'highlight-layer',
-            type: 'fill',
+            type: 'line',
             source: 'geojson-layer1',
             paint: {
-                'fill-color': [
-                    'case',
-                    ['boolean', ['feature-state', 'highlighted'], false],
-                    '#FFFF00', // Warna jika fitur disorot
-                    '#FF0000'  // Warna default
-                ],
-                'fill-opacity': 0.5
-            }
+                'line-color': '#FFFF00',
+                'line-width': 3
+            },
+            filter: ['==', 'NIB', ''] // Default tidak ada fitur yang disorot
         });
-
         // Tambahkan layer "Zona Nilai Tanah"
         map.addLayer({
             id: 'geojson-layer2',
@@ -483,27 +462,29 @@ handleLayerClick('geojson-layer3', 'Atribut Pola Ruang');
             return;
         }
 
+        // Ambil semua fitur dari sumber GeoJSON
         const features = map.querySourceFeatures('geojson-layer1', {
             sourceLayer: 'geojson-layer1'
         });
 
+        // Cari fitur berdasarkan atribut NIB
         const matchingFeatures = features.filter(feature => 
             feature.properties.NIB && feature.properties.NIB === nibInput
         );
 
-        console.log('Matching Features:', matchingFeatures); // Debug
-
         if (matchingFeatures.length > 0) {
             const matchingFeature = matchingFeatures[0];
-            console.log('Selected Feature ID:', matchingFeature.id); // Debug
+            const coordinates = matchingFeature.geometry.coordinates;
 
+            // Fly to fitur yang ditemukan
             map.flyTo({
                 center: turf.centroid(matchingFeature).geometry.coordinates,
-                zoom: 20,
+                zoom: 16,
                 essential: true
             });
 
-            map.setFilter('highlight-layer', ['==', 'id', matchingFeature.id]);
+            // Update filter pada layer highlight
+            map.setFilter('highlight-layer', ['==', 'NIB', nibInput]);
         } else {
             alert(`NIB ${nibInput} tidak ditemukan.`);
         }
